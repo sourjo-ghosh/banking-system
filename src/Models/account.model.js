@@ -8,10 +8,12 @@ const accountSchema = new mongoose.Schema({
         index: true,
     }, 
     status: {
+        type: String,
         enum:{
             values: ["active", "frozen", "inactive"],
-            message: "Status must be either active or inactive"
-        }
+            message: "{VALUE} is not a valid status. Must be active, frozen, or inactive."
+        },
+        default: "active"
     },
     currency: {
         type: String,
