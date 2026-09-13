@@ -35,12 +35,12 @@ accountSchema.methods.getBalance = async function () {
     {
       $group: {
         _id: null,
-        $totalDebit: {
+        totalDebit: {
           $sum: {
             $cond: [{ $eq: ["$type", "DEBIT"] }, "$amount", 0],
           },
         },
-        $totalCredit: {
+        totalCredit: {
           $sum: {
             $cond: [{ $eq: ["$type", "CREDIT"] }, "$amount", 0],
           },

@@ -8,7 +8,7 @@ const transactionController = require("../controllers/transaction.controller");
  * Create a new transaction
  */
 
-router.post("/", authMiddleware.authMiddleware, transactionController)
+router.post("/", authMiddleware.authMiddleware, transactionController.createTransaction)
 
 
 module.exports = router;

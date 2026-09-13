@@ -1,9 +1,9 @@
-const nodemailer = require('nodemailer');
+const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  service: "gmail",
   auth: {
-    type: 'OAuth2',
+    type: "OAuth2",
     user: process.env.EMAIL_USER,
     clientId: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
@@ -14,9 +14,9 @@ const transporter = nodemailer.createTransport({
 // Verify the connection configuration
 transporter.verify((error, success) => {
   if (error) {
-    console.error('Error connecting to email server:', error);
+    console.error("Error connecting to email server:", error);
   } else {
-    console.log('Email server is ready to send messages');
+    console.log("Email server is ready to send messages");
   }
 });
 
@@ -30,9 +30,8 @@ const sendEmail = async (to, subject, text, html) => {
       text, // plain text body
       html, // html body
     });
-
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error("Error sending email:", error);
   }
 };
 
@@ -48,6 +47,17 @@ async function sendRegistrationEmail(userEmail, userName) {
 
   await sendEmail(userEmail, subject, text, html);
 }
+async function sendTransactionEmail(userEmail, name, amount, toAccount) {
+  const subject = "Transaction Confirmation";
+  const text = `Hi ${name},\n\nYour transaction of ${amount} to account ${toAccount} has been processed successfully.`;
+  const html = `
+    <p>Hi ${name},</p>
+    <p>Your transaction of <strong>${amount}</strong> to account <strong>${toAccount}</strong> has been processed successfully.</p>
+    <p>Best Regards,</p>
+    <p>The Banking Backend Team</p>
+  `;
 
+  await sendEmail(userEmail, subject, text, html);
+}
 
-module.exports = {sendRegistrationEmail};
+module.exports = { sendRegistrationEmail, sendTransactionEmail };
