@@ -9,6 +9,6 @@ const accountController = require('../controllers/account.controller');
  * - Create a new account
  * - Protected route
  */
-router.post("/create", authMiddleware.authMiddleware, accountController)
+router.post("/", authMiddleware.authMiddleware, accountController)
 
 module.exports = router;
