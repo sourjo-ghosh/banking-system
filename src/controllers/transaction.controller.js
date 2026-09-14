@@ -21,19 +21,61 @@ const userModel = require("../models/user.model");
 */
 
 async function createTransaction(req, res) {
-  const { fromAccount, toAccount, amount, idempotencyKey } = req.body;
-  if (!fromAccount || !toAccount || !amount || !idempotencyKey) {
+  // const { fromAccount, toAccount, amount, idempotencyKey } = req.body;
+  // find all the important docs
+  const {
+    userName: toAccountUserName,
+    amount,
+    idempotencyKey,
+    pinCode,
+  } = req.body;
+  // get fromAccount form req
+  const fromAccount = req.user._id;
+  if (
+    !fromAccount ||
+    !toAccountUserName ||
+    !amount ||
+    !idempotencyKey ||
+    pinCode
+  ) {
     return res.status(400).json({
       message: "Missing required fields",
     });
+  } // validate all the important docs
+
+  // validate fromAccountDoc
+  const fromAccountDoc = await accountModel.findOne({ user: fromAccount });
+  if (!fromAccountDoc) {
+    return res.status(404).json({ message: "Sender account not found" });
   }
-  const fromAccountDoc = await userModel.findOne({ _id: fromAccount });
-  const toAccountDoc = await userModel.findOne({ _id: toAccount });
+
+  // validate toAccountDoc
+  const toUserDoc = await userModel.findOne({ userName: toAccountUserName });
+  if (!toUserDoc) {
+    return res.status(404).json({ message: "Receiver user not found" });
+  }
+  const toAccountDoc = await accountModel.findOne({ user: toUserDoc._id });
+  if (!toAccountDoc) {
+    return res.status(404).json({ message: "Receiver account not found" });
+  }
+
   if (!fromAccountDoc || !toAccountDoc) {
     return res.status(404).json({
       message: "Account not found",
     });
   }
+
+  // validate pin code
+  const isValidPin = await fromAccountDoc.comparePinCode(pinCode);
+  if (!isValidPin) {
+    return res.status(401).json({ message: "Invalid PIN" });
+  }
+
+  // prevent send money to fromAccount from same account
+  if(fromAccountDoc._id.equals(toAccountDoc._id)){
+    return res.status(400).json({ message: "Cannot send money to your own account" });
+  }
+
   const isTransactionAlreadyExists = await transactionModel.findOne({
     idempotencyKey: idempotencyKey,
   });
@@ -61,11 +103,11 @@ async function createTransaction(req, res) {
     }
   }
 
-//   if (fromAccountDoc.status !== "ACTIVE" || toAccountDoc.status !== "ACTIVE") {
-//     return res.status(400).json({
-//       message: "One of the accounts is not active",
-//     });
-//   }
+    if (fromAccountDoc.status !== "ACTIVE" || toAccountDoc.status !== "ACTIVE") {
+      return res.status(400).json({
+        message: "One of the accounts is not active",
+      });
+    }
 
   const userBalance = await fromAccountDoc.getBalance();
   if (userBalance < amount) {

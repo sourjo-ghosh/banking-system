@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const ledgerModel = require("../models/ledger.model");
+const bcrypt = require("bcryptjs"); 
 
 const accountSchema = new mongoose.Schema(
   {
@@ -8,6 +9,11 @@ const accountSchema = new mongoose.Schema(
       ref: "User",
       required: [true, "User is required for creating an account"],
       index: true,
+    },
+    pinCode: {
+      type: String,
+      required: [true, "PIN code is required for creating an account"],
+      select: false,
     },
     status: {
       type: String,
@@ -23,7 +29,12 @@ const accountSchema = new mongoose.Schema(
       required: [true, "Currency is required for creating an account"],
       default: "BDT",
     },
-    
+    systemUser: {
+      type: Boolean,
+      default: false,
+      immutable: true,
+      select: false,
+    },
   },
   { timestamps: true },
 );
@@ -49,19 +60,32 @@ accountSchema.methods.getBalance = async function () {
       },
     },
     {
-        $project: {
-            _id: 0,
-            balance: {
-                $subtract: ["$totalCredit", "$totalDebit"]
-            }
-        }
-    }
+      $project: {
+        _id: 0,
+        balance: {
+          $subtract: ["$totalCredit", "$totalDebit"],
+        },
+      },
+    },
   ]);
-  if(BalanceData.length === 0) {
+  if (BalanceData.length === 0) {
     return 0;
   }
   return BalanceData[0].balance;
 };
+
+accountSchema.pre("save", async function(next){
+    if(!this.isModified("pinCode")){
+      return;
+    }
+    const hash = await bcrypt.hash(this.pinCode, 10);
+    this.pinCode = hash;
+    return;
+});
+
+accountSchema.methods.comparePinCode = async function(pinCode){
+  return await bcrypt.compare(pinCode, this.pinCode);
+}
 
 const accountModel = mongoose.model("Account", accountSchema);
 

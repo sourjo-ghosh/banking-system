@@ -35,12 +35,13 @@ const sendEmail = async (to, subject, text, html) => {
   }
 };
 
-async function sendRegistrationEmail(userEmail, userName) {
+async function sendRegistrationEmail(userEmail, name, userName) {
   const subject = "Welcome to Banking Backend App";
   const text = `Hi ${userName},\n\nWelcome to our app! We're excited to have you on board.`;
   const html = `
-    <p>Hi ${userName},</p>
+    <p>Hi ${name},</p>
     <p>Welcome to Banking Backend! We're excited to have you on board.</p>
+    <p>Your user name is ${userName}</p>
     <p>Best Regards,</p>
     <p>The Banking Backend Team</p>
   `;
