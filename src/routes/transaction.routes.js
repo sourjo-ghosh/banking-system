@@ -9,6 +9,7 @@ const transactionController = require("../controllers/transaction.controller");
  */
 
 router.post("/", authMiddleware.authMiddleware, transactionController.createTransaction)
+router.post("/system-initial-funds", authMiddleware.authSystemMiddleware, transactionController.systemInitialFunds)
 
 
 module.exports = router;

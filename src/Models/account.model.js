@@ -23,6 +23,7 @@ const accountSchema = new mongoose.Schema(
       required: [true, "Currency is required for creating an account"],
       default: "BDT",
     },
+    
   },
   { timestamps: true },
 );
