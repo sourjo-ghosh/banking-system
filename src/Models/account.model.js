@@ -74,7 +74,7 @@ accountSchema.methods.getBalance = async function () {
   return BalanceData[0].balance;
 };
 
-accountSchema.pre("save", async function(next){
+accountSchema.pre("save", async function(){
     if(!this.isModified("pinCode")){
       return;
     }

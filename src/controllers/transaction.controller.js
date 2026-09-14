@@ -36,7 +36,7 @@ async function createTransaction(req, res) {
     !toAccountUserName ||
     !amount ||
     !idempotencyKey ||
-    pinCode
+    !pinCode
   ) {
     return res.status(400).json({
       message: "Missing required fields",
@@ -44,7 +44,7 @@ async function createTransaction(req, res) {
   } // validate all the important docs
 
   // validate fromAccountDoc
-  const fromAccountDoc = await accountModel.findOne({ user: fromAccount });
+  const fromAccountDoc = await accountModel.findOne({ user: fromAccount }).select("+pinCode");
   if (!fromAccountDoc) {
     return res.status(404).json({ message: "Sender account not found" });
   }
@@ -72,10 +72,16 @@ async function createTransaction(req, res) {
   }
 
   // prevent send money to fromAccount from same account
-  if(fromAccountDoc._id.equals(toAccountDoc._id)){
-    return res.status(400).json({ message: "Cannot send money to your own account" });
+  if (fromAccountDoc._id.equals(toAccountDoc._id)) {
+    return res
+      .status(400)
+      .json({ message: "Cannot send money to your own account" });
   }
-
+  if (typeof amount !== "number" || amount <= 0) {
+    return res
+      .status(400)
+      .json({ message: "Amount must be a positive number" });
+  }
   const isTransactionAlreadyExists = await transactionModel.findOne({
     idempotencyKey: idempotencyKey,
   });
@@ -103,19 +109,28 @@ async function createTransaction(req, res) {
     }
   }
 
-    if (fromAccountDoc.status !== "ACTIVE" || toAccountDoc.status !== "ACTIVE") {
-      return res.status(400).json({
-        message: "One of the accounts is not active",
-      });
-    }
-
-  const userBalance = await fromAccountDoc.getBalance();
-  if (userBalance < amount) {
+  if (fromAccountDoc.status !== "active" || toAccountDoc.status !== "active") {
     return res.status(400).json({
-      message: "Insufficient balance",
+      message: "One of the accounts is not active",
     });
   }
 
+  const userBalance = await fromAccountDoc.getBalance();
+  // if (userBalance < amount) {
+  //   return res.status(400).json({
+  //     message: "Insufficient balance",
+  //   });
+  // }
+  // platform fee calculation
+  const systemAccount = await accountModel.findOne({ systemUser: true });
+  if (!systemAccount) {
+    return res
+      .status(500)
+      .json({ message: "Platform fee account not configured" });
+  }
+  const FEE_PERCENT = 2;
+  const feeAmount = (amount * FEE_PERCENT) / 100;
+  const receiverAmount = amount - feeAmount;
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -123,8 +138,9 @@ async function createTransaction(req, res) {
     [
       {
         fromAccount: fromAccountDoc._id,
-        toAccount,
+        toAccount: toAccountDoc._id,
         amount,
+        feeAmount: feeAmount,
         idempotencyKey,
         status: "PENDING",
       },
@@ -147,15 +163,27 @@ async function createTransaction(req, res) {
   const [creditLedgerEntry] = await ledgerModel.create(
     [
       {
-        account: toAccount,
-        amount: amount,
+        account: toAccountDoc._id,
+        amount: receiverAmount,
         transaction: transaction._id,
         type: "CREDIT",
       },
     ],
     { session },
   );
-
+  if (feeAmount > 0) {
+    await ledgerModel.create(
+      [
+        {
+          account: systemAccount._id,
+          amount: feeAmount,
+          transaction: transaction._id,
+          type: "CREDIT",
+        },
+      ],
+      { session },
+    );
+  }
   transaction.status = "COMPLETED";
   await transaction.save({ session });
 
@@ -163,10 +191,11 @@ async function createTransaction(req, res) {
   session.endSession();
 
   await emailService.sendTransactionEmail(
-    req.body.user,
-    req.body.name,
+    req.user.email,
+    req.user.name,
     amount,
-    toAccountDoc._id,
+    toAccountUserName,
+    transaction._id,
   );
   return res.status(201).json({
     message: "Transaction completed successfully",

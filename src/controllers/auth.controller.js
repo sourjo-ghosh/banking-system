@@ -10,12 +10,18 @@ async function userRegisterController(req, res) {
   const { email, name, userName, password } = req.body;
   const isExists = await userModel.findOne({
     email: email,
-    userName: userName,
   });
   if (isExists) {
     return res.status(422).json({
       status: "failed",
       message: "User already exists with this email",
+    });
+  }
+  const isUserNameAvailable = await userModel.findOne({ userName: userName });
+  if (isUserNameAvailable) {
+    return res.status(422).json({
+      status: "failed",
+      message: "User already exists with this User name, try another username",
     });
   }
   const isUserNameAlreadyTaken = await userModel.findOne({
@@ -48,7 +54,8 @@ async function userRegisterController(req, res) {
     jwt_token: token,
   });
 
-  await emailService.sendRegistrationEmail(user.email, user.name), user.userName;
+  (await emailService.sendRegistrationEmail(user.email, user.name),
+    user.userName);
 }
 
 async function userLoginController(req, res) {

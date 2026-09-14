@@ -48,12 +48,13 @@ async function sendRegistrationEmail(userEmail, name, userName) {
 
   await sendEmail(userEmail, subject, text, html);
 }
-async function sendTransactionEmail(userEmail, name, amount, toAccount) {
+async function sendTransactionEmail(userEmail, name, amount, toAccount, transactionID) {
   const subject = "Transaction Confirmation";
   const text = `Hi ${name},\n\nYour transaction of ${amount} to account ${toAccount} has been processed successfully.`;
   const html = `
     <p>Hi ${name},</p>
     <p>Your transaction of <strong>${amount}</strong> to account <strong>${toAccount}</strong> has been processed successfully.</p>
+    <p>Your transaction ID ${transactionID}</p>
     <p>Best Regards,</p>
     <p>The Banking Backend Team</p>
   `;
