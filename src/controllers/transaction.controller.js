@@ -116,11 +116,11 @@ async function createTransaction(req, res) {
   }
 
   const userBalance = await fromAccountDoc.getBalance();
-  // if (userBalance < amount) {
-  //   return res.status(400).json({
-  //     message: "Insufficient balance",
-  //   });
-  // }
+  if (userBalance < amount) {
+    return res.status(400).json({
+      message: "Insufficient balance",
+    });
+  }
   // platform fee calculation
   const systemAccount = await accountModel.findOne({ systemUser: true });
   if (!systemAccount) {
